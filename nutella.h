@@ -27,7 +27,7 @@
 #define RESPONSE_PORT 6959
 
 /** The port for streaming movies */
-#define STREAM_PORT 6960
+#define STREAM_PORT "6960"
  
 
  
@@ -54,6 +54,14 @@ void* server(void* arg);
 */
 
 void* client(void* arg);
+
+/** Sends the specified message over the specified socket
+	@param sock The socket to send the message to
+	@param msg A pointer to the nutella message to send
+	@return the number of bytes sent or -1 if there was an error
+*/
+
+int nutella_msend(int sock, nutella_msg_o* msg);
 
 /** Creates a request message to request the specified movie for streaming
 	@param movie_name A cstring containing the name of the movie requested

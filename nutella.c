@@ -60,6 +60,13 @@ void* server(void* arg) {
 		}
 		else {
 			printf("received msg: type %d, movie_name %s \n", msg.type, msg.movie_name);
+			
+			nutella_msg_o* resp = create_response(msg.movie_name, "192.168.1.160", 
+				STREAM_PORT);	
+				
+			nutella_msend(sock_send, resp);
+			free(resp);
+	
 		}
 		
 	}
@@ -84,9 +91,32 @@ void* client(void* arg) {
 		char* movie_name = readline("Enter movie name:");
 		nutella_msg_o* msg = create_request(movie_name);
 		
-		msend(sock_send, (char*)msg, sizeof(nutella_msg_o));
+		nutella_msend(sock_send, msg);
+		free(msg);
+		
+		nutella_msg_o buf;
+		int res = mrecv(sock_recv, (char*)&buf, sizeof(buf), 0);	
+		if (res == 1) {
+			perror("couldn't read msg");
+		}
+		else {
+			printf("Sreceived msg: type %d, movie_name %s, ip %s, port %s \n", 
+				buf.type, buf.movie_name, buf.ip_addr, buf.port);
+		
+		}
+		
 	}
 
+}
+
+/** Sends the specified message over the specified socket
+	@param sock The socket to send the message to
+	@param msg A pointer to the nutella message to send
+	@return the number of bytes sent or -1 if there was an error
+*/
+
+int nutella_msend(int sock, nutella_msg_o* msg) {
+	return msend(sock, (char*)msg, sizeof(nutella_msg_o));
 }
 
 
@@ -121,7 +151,7 @@ nutella_msg_o* create_request(char* movie_name) {
 nutella_msg_o* create_response(char* movie_name, char* addr, char* port) {
 	nutella_msg_o* response = (nutella_msg_o*) malloc( sizeof(nutella_msg_o));
 	
-	response->type - NUTELLA_RESPONSE;
+	response->type = NUTELLA_RESPONSE;
 	
 	strncpy(response->movie_name, movie_name, MAX_MOVIE_NAME);
 	strncpy(response->ip_addr, addr, NI_MAXHOST);
