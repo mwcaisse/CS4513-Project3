@@ -22,4 +22,14 @@ int create_server_socket(char* port);
 
 int create_client_socket(char* hostname, char* port);
 
+
+/** Gets the port of the specified socket
+
+	@param sock The socket to get the port of
+	@return a string containing the port, that should be freed after use, 
+		NULL if there was an error
+*/
+
+char* get_sock_port(int sock);
+
 #endif

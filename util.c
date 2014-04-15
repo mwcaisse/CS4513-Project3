@@ -23,10 +23,65 @@ void clear_screen() {
 
 
 /** Creates a server socket to listen for UDP packets
-	@param port The port to listen for data on
+	@param ip The address to create the server on
 	@return The socket descriptor of the created socket
 */
 
+int create_server_socket(char* ip) {
+
+	int sockfd = -1;
+	int res = -1;
+	
+	struct sockaddr_in addr_me;
+	
+	sockfd = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	//check if we created a socket
+	if (sockfd < 0) {
+		perror("Unable to create socket");
+		return sockfd;
+	}
+	
+	memset(&addr_me, 0, sizeof(addr_me));
+	addr_me.sin_family = AF_INET;
+	addr_me.sin_port = htons(0);
+	addr_me.sin_addr.s_addr = htonl(INADDR_ANY); // my up
+	
+	res = bind(sockfd, (struct sockaddr *)&addr_me, sizeof(addr_me));
+	
+	if (res) {
+		perror("Unable to bind");
+		close(sockfd);
+		return -1;
+	}
+	
+	return sockfd;	
+
+}
+
+/** Gets the port of the specified socket
+
+	@param sock The socket to get the port of
+	@return a string containing the port, that should be freed after use, 
+		NULL if there was an error
+*/
+
+char* get_sock_port(int sock) {	
+	struct sockaddr_in addr;
+	socklen_t size;
+	
+	if (getsockname(sock, (struct sockaddr*) &addr, &size)) {
+		perror("Couldnt get port");
+		return NULL;
+	}
+	
+	char* port = (char*) malloc(NI_MAXSERV);
+	
+	snprintf(port, NI_MAXSERV, "%d", ntohs(addr.sin_port));
+	
+	return port;
+}
+
+/*
 int create_server_socket(char* port) {
 	int sockfd = -1;
 	int res = -1;
@@ -67,7 +122,7 @@ int create_server_socket(char* port) {
 	
 	//return the socket we created, or -1 if we didnt create a socket
 	return sockfd;
-}
+}*/
 
 /** Creates a client socket to send and recv data from a server
 	@param hostname The hostname of the server to connect to
