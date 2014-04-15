@@ -14,11 +14,17 @@
 /** The maximum length of a host name */
 #define MAX_HOST (255)
 
+/** The maximum length of the stream data */
+#define MAX_STREAM_DATA (500)
+
 /** A movie request */ 
 #define NUTELLA_REQUEST (1)
 
 /** A response to a movie request */
 #define NUTELLA_RESPONSE (2)
+
+/** Message to send to the server to start the stream */
+#define NUTELLA_STREAM_START (3)
 
 /** The request address */
 #define REQUEST_ADDR "239.1.3.1"
@@ -36,8 +42,10 @@
 #define STREAM_PORT "6960"
 
 /** The response time out, 15 seconds */
-#define RESPONSE_TIME_OUT 15
+#define RESPONSE_TIMEOUT 15
  
+/** The time out for the server waiting for a client to initiate the stream */
+#define STREAM_TIMEOUT 15
 
  
 /** The structure that represents the message to be sent for requests
@@ -53,6 +61,17 @@ struct _nutella_msg {
 
 typedef struct _nutella_msg nutella_msg_o;
 
+/** The message struct to be used for streaming movies
+*/
+
+struct _stream_msg { 
+	int id; // the id of the stream, each movie stream gets its own id
+	int frame; // the current frame of the movie
+	char data[MAX_STREAM_DATA]; // the data of the stream
+};
+
+typedef struct _stream_msg stream_msg_o;
+
 /** Prints the usage of this program
 */
 
@@ -66,10 +85,11 @@ void* server(void* arg);
 /** Creates a response message and multicasts it out over the specified socekt	
 	@param sock The socket to send the message to
 	@param movie_name The name of the movie we are responding to
+	@oaram port The port to tell the client we are listening on
 	@return the number of bytes sent or -1 if there was an error
 */
 
-int server_send_response(int sock, char* movie_name);
+int server_send_response(int sock, char* movie_name, char* port);
 
 /** Checks if the server has the specified movie to stream
 	@param movie_name The movie to check for
@@ -77,6 +97,16 @@ int server_send_response(int sock, char* movie_name);
 */
 
 int server_check_movie(char* movie_name);
+
+/** Creates a socket to listen for connections from a client to stream the specified movie.
+	Will timeout if it does not hear from a client after the STREAM_TIMEOUT time
+	@param notify_sock The id of the socket to send the request to the client to notify that we
+		have the file and how to connect
+	@param movie_name The name of the movie to stream
+	@return 0 if sucessful, 1 if timed out, -1 if error
+*/
+
+int server_listen_stream(int notify_sock, char* movie_name);
 
 /** Thread function that will listen for user input, and fetch movies
 		to stream

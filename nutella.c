@@ -22,9 +22,10 @@ char* my_ip;
 /** The movie directory that contains the movies to stream */
 char* movie_directory;
 
+/** The move that the user has last requested */
+char* requested_movie;
+
 int main(int argc, char* argv[]) {
-
-
 
 	///check arguments
 	if (argc != 3) {
@@ -103,7 +104,7 @@ void* server(void* arg) {
 
 		//woo we have the movie
 		printf("We have the movie sending the response \n");
-		server_send_response(sock_send, msg.movie_name);
+		server_listen_stream(sock_send, msg.movie_name);
 
 		
 	}
@@ -114,11 +115,12 @@ void* server(void* arg) {
 /** Creates a response message and multicasts it out over the specified socekt	
 	@param sock The socket to send the message to
 	@param movie_name The name of the movie we are responding to
+	@oaram port The port to tell the client we are listening on
 	@return the number of bytes sent or -1 if there was an error
 */
 
-int server_send_response(int sock, char* movie_name) {
-	nutella_msg_o* resp = create_response(movie_name, my_ip, STREAM_PORT);	
+int server_send_response(int sock, char* movie_name, char* port) {
+	nutella_msg_o* resp = create_response(movie_name, my_ip, port);	
 	int res = nutella_msend(sock, resp);
 	free(resp);
 	return res;
@@ -139,6 +141,34 @@ int server_check_movie(char* movie_name) {
 	}
 	return 0; //file does not exist we do not have movie
 }
+
+/** Creates a socket to listen for connections from a client to stream the specified movie.
+	Will timeout if it does not hear from a client after the STREAM_TIMEOUT time
+	@param notify_sock The id of the socket to send the request to the client to notify that we
+		have the file and how to connect
+	@param movie_name The name of the movie to stream
+	@return 0 if sucessful, 1 if timed out, -1 if error
+*/
+
+int server_listen_stream(int notify_sock, char* movie_name) {
+	int listen_sock = create_server_socket(STREAM_PORT);
+	
+	if (listen_sock < 0) {
+		//we couldn't create a socket,
+		return -1;
+	}
+	
+	//we have our socket, lets notify the user
+	if (server_send_response(notify_sock, movie_name, STREAM_PORT) < 0) {
+		perror("Couldn't notfy client of movie");
+		close(listen_sock);
+		return -1;
+	}
+	
+	//we have the socket set up, listen for requests from the client
+
+}
+
 
 void* client(void* arg) {
 
@@ -163,7 +193,7 @@ void* client(void* arg) {
 		nutella_msg_o buf;
 		
 		//lets wait for a response
-		int waiting = RESPONSE_TIME_OUT;
+		int waiting = RESPONSE_TIMEOUT;
 		int res = 0;
 		
 		while (waiting) {
@@ -173,9 +203,12 @@ void* client(void* arg) {
 				waiting --; // decrement the timeout counter
 				sleep(1); // sleep for a second				
 			}
-			else {	
-				break;
+			else if (strncmp(buf.movie_name, movie_name, MAX_MOVIE_NAME) != 0) {	
+				//found a movie with a different name, discard it.
 			}
+			else {
+				break; // we found a movie, and it has the correct name
+			}			
 			
 		}
 		if (res < 0) {
