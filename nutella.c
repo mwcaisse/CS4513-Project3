@@ -100,8 +100,9 @@ void* server(void* arg) {
 			printf("Movie %s not found \n", msg.movie_name);
 			continue;
 		}
-		
+
 		//woo we have the movie
+		printf("We have the movie sending the response \n");
 		server_send_response(sock_send, msg.movie_name);
 
 		
@@ -167,10 +168,10 @@ void* client(void* arg) {
 		
 		while (waiting) {
 			res = mrecv(sock_recv, (char*)&buf, sizeof(buf), MSG_DONTWAIT);	
-			if (res && errno == EAGAIN) {
+			if (res < 0 && errno == EAGAIN) {
+				printf("No data, waiting \n");
 				waiting --; // decrement the timeout counter
-				sleep(1); // sleep for a second
-				
+				sleep(1); // sleep for a second				
 			}
 			else {	
 				break;
