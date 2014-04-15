@@ -15,13 +15,29 @@ pthread_t server_thread;
 /** The pthread that the client is running in */
 pthread_t client_thread;
 
+
+/** The IP address of this nutella client */
+char* my_ip;
+
+/** The movie directory that contains the movies to stream */
+char* movie_directory;
+
 int main(int argc, char* argv[]) {
 
-	//check if any arguments were returned
-	if (argc != 1) {
-		printf("nutella does not take arguments \n");
+
+
+	///check arguments
+	if (argc != 3) {
+		print_usage();
 		return 0;
 	}
+	
+	my_ip = (char*) malloc(MAX_HOST + 1);
+	movie_directory = (char*) malloc(MAX_MOVIE_DIRECTORY + 1);
+	
+	//copy over the arguments
+	strncpy(my_ip, argv[1], MAX_HOST);
+	strncpy(movie_directory, argv[2], MAX_MOVIE_DIRECTORY);
 	
 	
 	
@@ -35,6 +51,15 @@ int main(int argc, char* argv[]) {
 
 }
 
+/** Prints the usage of this program
+*/
+
+void print_usage() {
+	printf("Usage: \n");
+	printf("\t ./nutella ipaddress moviedir \n");
+	printf("Example: \n");
+	printf("\t ./nutella 192.168.1.160 ./movies/ \n");
+}
 
 void* server(void* arg) {
 
@@ -61,7 +86,7 @@ void* server(void* arg) {
 		else {
 			printf("received msg: type %d, movie_name %s \n", msg.type, msg.movie_name);
 			
-			nutella_msg_o* resp = create_response(msg.movie_name, "192.168.1.160", 
+			nutella_msg_o* resp = create_response(msg.movie_name, my_ip, 
 				STREAM_PORT);	
 				
 			nutella_msend(sock_send, resp);
@@ -132,7 +157,7 @@ nutella_msg_o* create_request(char* movie_name) {
 	request->type = NUTELLA_REQUEST;
 	//copy over the movie name, and zero out the other strings
 	strncpy(request->movie_name, movie_name, MAX_MOVIE_NAME);
-	memset(request->ip_addr, 0, NI_MAXHOST);
+	memset(request->ip_addr, 0, MAX_HOST);
 	memset(request->port, 0, NI_MAXSERV);
 	
 	return request;
@@ -154,7 +179,7 @@ nutella_msg_o* create_response(char* movie_name, char* addr, char* port) {
 	response->type = NUTELLA_RESPONSE;
 	
 	strncpy(response->movie_name, movie_name, MAX_MOVIE_NAME);
-	strncpy(response->ip_addr, addr, NI_MAXHOST);
+	strncpy(response->ip_addr, addr, MAX_HOST);
 	strncpy(response->port, port, NI_MAXSERV);
 	
 	return response;

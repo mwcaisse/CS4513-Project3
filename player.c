@@ -9,6 +9,9 @@
 #include "util.h"
 
 
+#define FPS 1
+
+
 
 int main (int argc, char* argv[]) {
 
@@ -28,10 +31,12 @@ int main (int argc, char* argv[]) {
 	
 	int read = 0;
 	
+	int sleep_time = (1000 / FPS) * 1000;
+	
 	while ( (read = getline(&line, &len, file)) != -1) {
 		if (strncmp(line, "end", 3) == 0) {
 			//we have reached  the end of a frame
-			usleep(200 * 1000);
+			usleep(sleep_time);
 			clear_screen();
 		}
 		else {

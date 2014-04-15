@@ -8,6 +8,12 @@
 /** The maximum length of a movie name */
 #define MAX_MOVIE_NAME (255)
 
+/** The maximum length of the movie directory path */
+#define MAX_MOVIE_DIRECTORY (255)
+
+/** The maximum length of a host name */
+#define MAX_HOST (255)
+
 /** A movie request */ 
 #define NUTELLA_REQUEST (1)
 
@@ -38,11 +44,16 @@
 struct _nutella_msg {
 	short type; // the type of request
 	char movie_name[MAX_MOVIE_NAME]; // the name of the movie request
-	char ip_addr[NI_MAXHOST]; // the address to initiate the request
+	char ip_addr[MAX_HOST]; // the address to initiate the request
 	char port[NI_MAXSERV]; // the port to initiate the request
 };
 
 typedef struct _nutella_msg nutella_msg_o;
+
+/** Prints the usage of this program
+*/
+
+void print_usage();
 
 /** Thread function that will listen for requests to stream movies
 */
