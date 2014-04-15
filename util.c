@@ -132,4 +132,38 @@ int create_server_socket(char* port) {
 
 int create_client_socket(char* hostname, char* port) {
 
+	int sockfd = -1;
+	int res = -1;
+	
+	struct addrinfo hints;
+	struct addrinfo* server_info;
+	struct addrinfo* ptr;
+	
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_DGRAM;
+	
+	if ((res = getaddrinfo(hostname, port, &hints, &server_info))) {
+		perror("Couldnt get server address info");
+		return -1;
+	}
+	
+	for (ptr = server_info; ptr != NULL; ptr = ptr->ai_next) {
+		if ((sockfd = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol)) < 0)  {
+			perror("Couldnt create socket");
+			continue;
+		}
+		
+		break;
+	}
+	
+	freeaddrinfo(server_info);
+	
+	if (ptr == NULL) {
+		perror("Couldnt find a socket to create");
+		return -1;
+	}
+	
+	return sockfd;
+
 }
