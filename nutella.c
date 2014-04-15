@@ -82,21 +82,61 @@ void* server(void* arg) {
 		
 		if (res == 1) {
 			perror("couldn't read msg");
+			continue;
 		}
-		else {
-			printf("received msg: type %d, movie_name %s \n", msg.type, msg.movie_name);
-			
-			nutella_msg_o* resp = create_response(msg.movie_name, my_ip, 
-				STREAM_PORT);	
-				
-			nutella_msend(sock_send, resp);
-			free(resp);
-	
+
+		//we have received a msg.
+		if (msg.type != NUTELLA_REQUEST) {
+			//we are only listening for requests,
+			//some client is being malicious yay
+			printf("Malicious client detected \n");
+			continue;
 		}
+		printf("received msg: type %d, movie_name %s \n", msg.type, msg.movie_name);
+		
+		//check if we have the movie		
+		if(!server_check_movie(msg.movie_name)) {
+			//we don't have the movie, dont do anything
+			printf("Movie %s not found \n", msg.movie_name);
+			continue;
+		}
+		
+		//woo we have the movie
+		server_send_response(sock_send, msg.movie_name);
+
 		
 	}
 	
 
+}
+
+/** Creates a response message and multicasts it out over the specified socekt	
+	@param sock The socket to send the message to
+	@param movie_name The name of the movie we are responding to
+	@return the number of bytes sent or -1 if there was an error
+*/
+
+int server_send_response(int sock, char* movie_name) {
+	nutella_msg_o* resp = create_response(movie_name, my_ip, STREAM_PORT);	
+	int res = nutella_msend(sock, resp);
+	free(resp);
+	return res;
+}
+
+/** Checks if the server has the specified movie to stream
+	@param movie_name The movie to check for
+	@return 1 if we have the movie, 0 otherwise
+*/
+
+int server_check_movie(char* movie_name) {
+	char* file_name = (char*) malloc(MAX_MOVIE_DIRECTORY + MAX_MOVIE_NAME + 2);
+	strncpy(file_name, movie_directory, MAX_MOVIE_DIRECTORY);
+	strncat(file_name, "/", 2);
+	strncat(file_name, movie_name, MAX_MOVIE_NAME);
+	if (!access(file_name, F_OK)) {
+		return 1; // file exists, we must have the movie
+	}
+	return 0; //file does not exist we do not have movie
 }
 
 void* client(void* arg) {
@@ -120,9 +160,30 @@ void* client(void* arg) {
 		free(msg);
 		
 		nutella_msg_o buf;
-		int res = mrecv(sock_recv, (char*)&buf, sizeof(buf), 0);	
-		if (res == 1) {
-			perror("couldn't read msg");
+		
+		//lets wait for a response
+		int waiting = RESPONSE_TIME_OUT;
+		int res = 0;
+		
+		while (waiting) {
+			res = mrecv(sock_recv, (char*)&buf, sizeof(buf), MSG_DONTWAIT);	
+			if (res && errno == EAGAIN) {
+				waiting --; // decrement the timeout counter
+				sleep(1); // sleep for a second
+				
+			}
+			else {	
+				break;
+			}
+			
+		}
+		if (res < 0) {
+			if (errno != EAGAIN) {
+				perror("error receiving message");
+			}
+			else {
+				printf("Timed out. No one has the movie %s \n", movie_name);
+			}
 		}
 		else {
 			printf("Sreceived msg: type %d, movie_name %s, ip %s, port %s \n", 

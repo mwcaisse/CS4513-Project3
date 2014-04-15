@@ -34,6 +34,9 @@
 
 /** The port for streaming movies */
 #define STREAM_PORT "6960"
+
+/** The response time out, 15 seconds */
+#define RESPONSE_TIME_OUT 15
  
 
  
@@ -59,6 +62,21 @@ void print_usage();
 */
 
 void* server(void* arg);
+
+/** Creates a response message and multicasts it out over the specified socekt	
+	@param sock The socket to send the message to
+	@param movie_name The name of the movie we are responding to
+	@return the number of bytes sent or -1 if there was an error
+*/
+
+int server_send_response(int sock, char* movie_name);
+
+/** Checks if the server has the specified movie to stream
+	@param movie_name The movie to check for
+	@return 1 if we have the movie, 0 otherwise
+*/
+
+int server_check_movie(char* movie_name);
 
 /** Thread function that will listen for user input, and fetch movies
 		to stream
