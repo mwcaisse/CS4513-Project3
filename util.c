@@ -22,12 +22,12 @@ void clear_screen() {
 }
 
 
-/** Creates a server socket to listen for UDP packets
-	@param ip The address to create the server on
+/** Creates a server socket to listen for UDP packets, chooses a random port
+		for the socket
 	@return The socket descriptor of the created socket
 */
 
-int create_server_socket(char* ip) {
+int create_server_socket() {
 
 	int sockfd = -1;
 	int res = -1;

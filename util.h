@@ -7,12 +7,12 @@
 
 void clear_screen();
 
-/** Creates a server socket to listen for UDP packets
-	@param port The port to listen for data on
+/** Creates a server socket to listen for UDP packets, chooses a random port
+		for the socket
 	@return The socket descriptor of the created socket
 */
 
-int create_server_socket(char* port);
+int create_server_socket();
 
 /** Creates a client socket to send and recv data from a server
 	@param hostname The hostname of the server to connect to

@@ -40,7 +40,7 @@ int main (int argc, char* argv[]) {
 			clear_screen();
 		}
 		else {
-			printf("%s\n", line);
+			printf("%s", line);
 		}
 	}
 	

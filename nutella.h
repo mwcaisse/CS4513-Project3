@@ -47,6 +47,9 @@
 /** The time out for the server waiting for a client to initiate the stream */
 #define STREAM_TIMEOUT 15
 
+/** The FPS of the stream */
+#define STREAM_FPS 3
+
  
 /** The structure that represents the message to be sent for requests
 	and respones
@@ -67,10 +70,21 @@ typedef struct _nutella_msg nutella_msg_o;
 struct _stream_msg { 
 	int id; // the id of the stream, each movie stream gets its own id
 	int frame; // the current frame of the movie
+	int done; // whether or not the movie is over, 1 if this is the last msg
 	char data[MAX_STREAM_DATA]; // the data of the stream
 };
 
 typedef struct _stream_msg stream_msg_o;
+
+/** Creates a stream message
+	@param id The current stream id
+	@param frame The current frame
+	@param done Whether or not the stream is done
+	@param data The message data
+	@return A pointer to the newly created stream message, should be freed after use
+*/
+
+stream_msg_o* create_stream_msg(int id, int frame, int done, char* data);
 
 /** Prints the usage of this program
 */
@@ -97,6 +111,13 @@ int server_send_response(int sock, char* movie_name, char* port);
 */
 
 int server_check_movie(char* movie_name);
+
+/** Gets the path to the movie
+	@param movie_name THe name of the movie
+	@param A string containing the path to the movie
+*/
+
+char* get_movie_path(char* movie_name);
 
 /** Creates a socket to listen for connections from a client to stream the specified movie.
 	Will timeout if it does not hear from a client after the STREAM_TIMEOUT time
@@ -141,6 +162,12 @@ nutella_msg_o* create_request(char* movie_name);
 */
 
 nutella_msg_o* create_response(char* movie_name, char* addr, char* port);
+
+/** Returns the next available stream id
+	@return The next stream id
+*/
+
+int get_next_stream_id();
  
  
 #endif

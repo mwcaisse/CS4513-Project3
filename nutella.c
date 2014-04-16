@@ -25,6 +25,9 @@ char* movie_directory;
 /** The move that the user has last requested */
 char* requested_movie;
 
+/** The stream id counter */
+int stream_id = 1;
+
 int main(int argc, char* argv[]) {
 
 	///check arguments
@@ -132,14 +135,27 @@ int server_send_response(int sock, char* movie_name, char* port) {
 */
 
 int server_check_movie(char* movie_name) {
+	char* file_name = get_movie_path(movie_name);
+	strncat(file_name, movie_name, MAX_MOVIE_NAME);
+	if (!access(file_name, F_OK)) {
+		free(file_name);
+		return 1; // file exists, we must have the movie
+	}
+	free(file_name);
+	return 0; //file does not exist we do not have movie
+}
+
+/** Gets the path to the movie
+	@param movie_name THe name of the movie
+	@param A string containing the path to the movie
+*/
+
+char* get_movie_path(char* movie_name) {
 	char* file_name = (char*) malloc(MAX_MOVIE_DIRECTORY + MAX_MOVIE_NAME + 2);
 	strncpy(file_name, movie_directory, MAX_MOVIE_DIRECTORY);
 	strncat(file_name, "/", 2);
 	strncat(file_name, movie_name, MAX_MOVIE_NAME);
-	if (!access(file_name, F_OK)) {
-		return 1; // file exists, we must have the movie
-	}
-	return 0; //file does not exist we do not have movie
+	return file_name;
 }
 
 /** Creates a socket to listen for connections from a client to stream the specified movie.
@@ -158,16 +174,160 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 		return -1;
 	}
 	
-	//we have our socket, lets notify the user
-	if (server_send_response(notify_sock, movie_name, STREAM_PORT) < 0) {
-		perror("Couldn't notfy client of movie");
-		close(listen_sock);
+	char* port = get_sock_port(listen_sock);
+	if (port == NULL) {
+		//error retreiving the port, cant continue without it
 		return -1;
 	}
 	
+	//we have our socket, lets notify the user
+	if (server_send_response(notify_sock, movie_name, port) < 0) {
+		perror("Couldn't notfy client of movie");
+		close(listen_sock);
+		free(port);
+		return -1;
+	}
+	
+	//we are done with the port, free it
+	free(port);
+	
 	//we have the socket set up, listen for requests from the client
 
+	//the struct to contain the address of our client
+	//we will just stream the movie to the first client to respond
+	struct sockaddr addr_client;
+	socklen_t addr_len;
+	// the buffer for receiving messages
+	nutella_msg_o buf;
+	
+	int waiting = STREAM_TIMEOUT;
+	int res = 0;
+	
+	while (waiting) {
+		res = recvfrom(listen_sock, &buf, sizeof(buf), MSG_DONTWAIT,
+			&addr_client, &addr_len);
+			
+		if (res < 0 && errno == EAGAIN) {
+			//no data
+			waiting --; // decrement the wait counter
+			sleep(1); // sleep for a second
+		}
+		else if (buf.type != NUTELLA_STREAM_START || 
+			strncmp(buf.movie_name, movie_name, MAX_MOVIE_NAME) !=0) {
+			
+			//request to stream a different movie, or not a stream start message
+		}
+		else {
+			break; // stream start message was received
+		}
+	}
+	
+	//check if we tiemd out
+	if (res < 0) {
+		if (errno != EAGAIN) {
+			perror("error receiving message");
+			return -1;
+		}
+		else {
+			printf("Streaming timed out, no client responded \n");		
+			return 1;
+		}
+	}
+	
+	//we didnt time out, time to start streaming
+
+	//open the file.
+	char* file_name = get_movie_path(movie_name);
+	FILE* file = fopen(file_name, "r");
+	free(file_name);
+	
+	if (!file) {
+		perror("Couldnt open file");
+		//also send out the movie over message, and stop the stream
+		return -1;
+	}
+	
+	//start sending the file to the stream line by line
+	
+	char* line_buffer = malloc(MAX_STREAM_DATA);
+	line_buffer[0] = '\0';
+	int data_count = MAX_STREAM_DATA;
+	
+	char* line = NULL;
+	size_t len = 0;
+	
+	int cur_frame = 0;
+	int sleep_time = (1000 / STREAM_FPS) * 1000;
+	int stream_id = get_next_stream_id();
+	int read = 0;
+	
+	while ( (read = getline(&line, &len, file)) != -1) {
+		if (strncmp(line, "end", 3) == 0) {
+			
+			if (data_count < MAX_STREAM_DATA) {
+				//data buffer has data in it, send the message
+				stream_msg_o* msg = create_stream_msg(stream_id, cur_frame,
+					 0, line_buffer);
+					 
+				res = sendto(listen_sock, msg, sizeof(stream_msg_o), 0,
+					&addr_client, addr_len);
+				if (res < 0) {
+					perror("sending stream message");
+				}
+				free(msg);
+				
+				memset(line_buffer, 0, MAX_STREAM_DATA);
+				line_buffer[0] = '\0';
+				data_count = MAX_STREAM_DATA;
+			}
+		
+			usleep(sleep_time);
+			cur_frame ++;	
+			free(line);
+			continue;		
+		}
+		
+		if (read > data_count) {
+			//clean out the buffer
+			stream_msg_o* msg = create_stream_msg(stream_id, cur_frame,
+				0, line_buffer);
+				 
+			res = sendto(listen_sock, msg, sizeof(stream_msg_o), 0,
+				&addr_client, addr_len);
+			if (res < 0) {
+				perror("sending stream message");
+			}
+			free(msg);
+			
+			memset(line_buffer, 0, MAX_STREAM_DATA);
+			line_buffer[0] = '\0';
+			data_count = MAX_STREAM_DATA;
+		}
+
+		//append the data to the end of the buffer
+		strncat(line_buffer, line, read);
+		data_count -= read; 
+		
+		free(line);
+		
+	}
+	
+	//send the finish message to the client
+	stream_msg_o* msg = create_stream_msg(stream_id, -1,
+		1, line_buffer);
+	res = sendto(listen_sock, msg, sizeof(stream_msg_o), 0,
+		&addr_client, addr_len);
+		
+	if (res < 0) {
+		perror("sending stream message");
+	}
+	
+	free(msg);
+	free(line_buffer);
+	
+	return 0;
 }
+
 
 
 void* client(void* arg) {
@@ -278,6 +438,32 @@ nutella_msg_o* create_response(char* movie_name, char* addr, char* port) {
 	strncpy(response->port, port, NI_MAXSERV);
 	
 	return response;
+}
+
+/** Creates a stream message
+	@param id The current stream id
+	@param frame The current frame
+	@param done Whether or not the stream is done
+	@param data The message data
+	@return A pointer to the newly created stream message, should be freed after use
+*/
+
+stream_msg_o* create_stream_msg(int id, int frame, int done, char* data) {
+	stream_msg_o* msg = (stream_msg_o*) malloc(sizeof(stream_msg_o));
+	msg->id = id;
+	msg->frame = frame;
+	msg->done = done;
+	strncpy(msg->data, data, MAX_STREAM_DATA);
+	
+	return msg;
+}
+
+/** Returns the next available stream id
+	@return The next stream id
+*/
+
+int get_next_stream_id() {
+	return stream_id ++;
 }
 
 
