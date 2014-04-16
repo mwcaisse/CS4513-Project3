@@ -107,7 +107,7 @@ char* get_sock_port(int sock) {
 	
 	char* port = (char*) malloc(NI_MAXSERV);
 	
-	printf("RAW PORT: %d\n", addr.sin_port);
+	//printf("RAW PORT: %d\n", addr.sin_port);
 	
 	snprintf(port, NI_MAXSERV, "%d", ntohs(addr.sin_port));
 	

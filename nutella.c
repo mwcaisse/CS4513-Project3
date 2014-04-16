@@ -96,7 +96,7 @@ void* server(void* arg) {
 			printf("Malicious client detected \n");
 			continue;
 		}
-		printf("received msg: type %d, movie_name %s \n", msg.type, msg.movie_name);
+		//printf("SERV: received msg: type %d, movie_name %s \n", msg.type, msg.movie_name);
 		
 		//check if we have the movie		
 		if(!server_check_movie(msg.movie_name)) {
@@ -106,7 +106,7 @@ void* server(void* arg) {
 		}
 
 		//woo we have the movie
-		printf("We have the movie sending the response \n");
+		//printf("We have the movie sending the response \n");
 		server_listen_stream(sock_send, msg.movie_name);
 
 		
@@ -178,7 +178,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 		//error retreiving the port, cant continue without it
 		return -1;
 	}
-	printf("SERV: PORT: %s \n", port);
+	//printf("SERV: PORT: %s \n", port);
 	//we have our socket, lets notify the user
 	if (server_send_response(notify_sock, movie_name, port) < 0) {
 		perror("SERV: Couldn't notfy client of movie");
@@ -384,12 +384,14 @@ void* client(void* arg) {
 			}
 		}
 		else {
-			printf("CLIENT: received msg: type %d, movie_name %s, ip %s, port %s \n", 
-				buf.type, buf.movie_name, buf.ip_addr, buf.port);
+			//printf("CLIENT: received msg: type %d, movie_name %s, ip %s, port %s \n", 
+				//buf.type, buf.movie_name, buf.ip_addr, buf.port);
 				
 			client_stream_movie(&buf);
 		
 		}
+		
+		free(movie_name);
 		
 		
 		
