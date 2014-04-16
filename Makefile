@@ -4,7 +4,7 @@ player: player.o util.o
 	gcc $^ -o player
 	
 nutella: nutella.o msock.o util.o
-	gcc $^ -o nutella -pthread -lreadline
+	gcc $^ -o nutella -pthread
 	
 player.o: player.c player.h
 	gcc -c player.c

@@ -346,7 +346,9 @@ void* client(void* arg) {
 	int running = 1;
 	
 	while (running) {
-		char* movie_name = readline("Enter movie name:");
+		printf("Enter movie name: ");
+		char* movie_name = (char*) malloc(MAX_MOVIE_NAME);
+		scanf("%s", movie_name);
 		nutella_msg_o* msg = create_request(movie_name);
 		
 		nutella_msend(sock_send, msg);
