@@ -35,7 +35,7 @@ int create_server_socket(int port) {
 	
 	struct sockaddr_in addr_me;
 	
-	sockfd = socket( AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	sockfd = socket( AF_INET, SOCK_DGRAM, 0);
 	//check if we created a socket
 	if (sockfd < 0) {
 		perror("Unable to create socket");
