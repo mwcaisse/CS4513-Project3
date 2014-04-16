@@ -58,6 +58,27 @@ int create_server_socket() {
 
 }
 
+/** Returns a sockaddr struct with the specified host and port name
+	@param hostname The hostname to put in the struct
+	@param port The port to put in the struct
+	@return A pointer to a sockaddr struct, should be freed after use
+*/
+
+struct sockaddr* get_sockaddr(char* hostname, char* port) {
+	struct sockaddr_in* addr = (struct sockaddr_in*) malloc(sizeof(struct sockaddr_in));
+	
+	unsigned int portui;
+	sscanf(port, "%d", &portui);
+	
+	memset(addr, 0, sizeof(struct sockaddr_in));
+	addr->sin_family = AF_INET;
+	addr->sin_port = htons(portui);
+	addr->sin_addr.s_addr = inet_addr(hostname);
+
+	return (struct sockaddr*) addr;
+	
+}
+
 /** Gets the port of the specified socket
 
 	@param sock The socket to get the port of

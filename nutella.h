@@ -135,6 +135,13 @@ int server_listen_stream(int notify_sock, char* movie_name);
 
 void* client(void* arg);
 
+/** Starts streaming the movie from the server specified in the msg
+	@param msg The msg received from the server streaming the movie
+	@return 0 if sucessful, 1 if timedout, -1 if error
+*/
+
+int client_stream_movie(nutella_msg_o* msg);
+
 /** Sends the specified message over the specified socket
 	@param sock The socket to send the message to
 	@param msg A pointer to the nutella message to send

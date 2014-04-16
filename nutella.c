@@ -226,10 +226,12 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 	if (res < 0) {
 		if (errno != EAGAIN) {
 			perror("error receiving message");
+			close(listen_sock);
 			return -1;
 		}
 		else {
 			printf("Streaming timed out, no client responded \n");		
+			close(listen_sock);
 			return 1;
 		}
 	}
@@ -243,6 +245,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 	
 	if (!file) {
 		perror("Couldnt open file");
+		close(listen_sock);
 		//also send out the movie over message, and stop the stream
 		return -1;
 	}
@@ -380,12 +383,92 @@ void* client(void* arg) {
 			}
 		}
 		else {
-			printf("Sreceived msg: type %d, movie_name %s, ip %s, port %s \n", 
+			printf("received msg: type %d, movie_name %s, ip %s, port %s \n", 
 				buf.type, buf.movie_name, buf.ip_addr, buf.port);
+				
+			client_stream_movie(&buf);
 		
 		}
 		
+		
+		
 	}
+
+}
+
+/** Starts streaming the movie from the server specified in the msg
+	@param msg The msg received from the server streaming the movie
+	@return 0 if sucessful, 1 if timedout, -1 if error
+*/
+
+int client_stream_movie(nutella_msg_o* msg) {
+
+	int sockfd = create_client_socket(msg->ip_addr, msg->port);
+	
+	if (sockfd < 0) {
+		return -1;
+	}
+	
+	nutella_msg_o msg_stream;
+	msg_stream.type = NUTELLA_STREAM_START;
+	strncpy(msg_stream.movie_name, msg->movie_name, MAX_MOVIE_NAME);
+	
+	struct sockaddr* addr_server = get_sockaddr(msg->ip_addr, msg->port);
+	
+	int res = sendto(sockfd, &msg_stream, sizeof(msg_stream), 0, addr_server,
+		sizeof(struct sockaddr));
+	
+	free(addr_server);
+		
+	if (res < 0) {
+		//couldnt send message to start the stream
+		perror("Sending stream message");
+		close(sockfd);
+		return -1;
+	}
+	
+	
+	struct sockaddr addr_from;
+	socklen_t addr_len;
+	
+	int waiting = STREAM_TIMEOUT;	
+	int cur_frame = -1;
+	
+	stream_msg_o buf;
+	
+	while (waiting) {
+		res = recvfrom(sockfd, &buf, sizeof(buf), MSG_DONTWAIT, 
+			&addr_from, &addr_len);
+			
+		if (res < 0 && errno == EAGAIN) {
+			//no data, available
+			waiting --;
+			sleep(1);
+		}
+		else {
+			//there is data available, reset the time out
+			waiting = STREAM_TIMEOUT;
+			
+			if (buf.done) {
+				//movie is done, clear screen and break
+				clear_screen();
+				break;
+			}
+			
+			//check if we have advanced a frame
+			if (buf.frame != cur_frame) {
+				cur_frame = buf.frame;
+				clear_screen();
+			}
+			
+			printf("%s", buf.data);
+		}
+	}
+	
+	printf("Movie is done \n");
+	
+	close(sockfd);
+	return 0;
 
 }
 

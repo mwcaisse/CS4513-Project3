@@ -32,4 +32,12 @@ int create_client_socket(char* hostname, char* port);
 
 char* get_sock_port(int sock);
 
+/** Returns a sockaddr struct with the specified host and port name
+	@param hostname The hostname to put in the struct
+	@param port The port to put in the struct
+	@return A pointer to a sockaddr struct, should be freed after use
+*/
+
+struct sockaddr* get_sockaddr(char* hostname, char* port);
+
 #endif
