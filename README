@@ -1,0 +1,29 @@
+CS4513 Project 3
+Mitchell Caisse
+mwcaisse
+
+How to Make:
+	
+	make all 
+		to build all executables, nutella and player
+	
+	make nutella 
+		to make the nutella streamer
+	
+	make player 
+		to make the simple test standalone player
+		
+How to run:
+
+	./nutella ipaddr movies_dir
+		where ipaddr is the IP address of the local computer to send to clients
+			and movies_dir is the path to the directory containing the movies
+	
+		example:
+			./nutella 192.168.1.160 ./movies/
+			
+When trying to stream movies, the server expects the full name of the movie file
+	as it appears in the movie directory
+	
+	for example to play tiger.txt in the ./movies/ directory,
+		one must enter the move name as "tiger.txt"
