@@ -24,10 +24,11 @@ void clear_screen() {
 
 /** Creates a server socket to listen for UDP packets, chooses a random port
 		for the socket
+	@param port the port to bind to
 	@return The socket descriptor of the created socket
 */
 
-int create_server_socket() {
+int create_server_socket(int port) {
 
 	int sockfd = -1;
 	int res = -1;
@@ -40,6 +41,13 @@ int create_server_socket() {
 		perror("Unable to create socket");
 		return sockfd;
 	}
+	
+	int yes = 1;
+	if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int))) {
+		perror("UTIL: couldnt set sock opt REUSEADDR");
+		close(sockfd);
+	}
+	
 	
 	memset(&addr_me, 0, sizeof(addr_me));
 	addr_me.sin_family = AF_INET;
