@@ -101,7 +101,7 @@ void* server(void* arg) {
 		//check if we have the movie		
 		if(!server_check_movie(msg.movie_name)) {
 			//we don't have the movie, dont do anything
-			printf("Movie %s not found \n", msg.movie_name);
+			printf("SERV: Movie %s not found \n", msg.movie_name);
 			continue;
 		}
 
@@ -136,7 +136,6 @@ int server_send_response(int sock, char* movie_name, char* port) {
 
 int server_check_movie(char* movie_name) {
 	char* file_name = get_movie_path(movie_name);
-	strncat(file_name, movie_name, MAX_MOVIE_NAME);
 	if (!access(file_name, F_OK)) {
 		free(file_name);
 		return 1; // file exists, we must have the movie
@@ -179,10 +178,10 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 		//error retreiving the port, cant continue without it
 		return -1;
 	}
-	
+	printf("SERV: PORT: %s \n", port);
 	//we have our socket, lets notify the user
 	if (server_send_response(notify_sock, movie_name, port) < 0) {
-		perror("Couldn't notfy client of movie");
+		perror("SERV: Couldn't notfy client of movie");
 		close(listen_sock);
 		free(port);
 		return -1;
@@ -225,12 +224,12 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 	//check if we tiemd out
 	if (res < 0) {
 		if (errno != EAGAIN) {
-			perror("error receiving message");
+			perror("SERV: error receiving message");
 			close(listen_sock);
 			return -1;
 		}
 		else {
-			printf("Streaming timed out, no client responded \n");		
+			printf("SERV: Streaming timed out, no client responded \n");		
 			close(listen_sock);
 			return 1;
 		}
@@ -244,7 +243,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 	free(file_name);
 	
 	if (!file) {
-		perror("Couldnt open file");
+		perror("SERV: Couldnt open file");
 		close(listen_sock);
 		//also send out the movie over message, and stop the stream
 		return -1;
@@ -275,7 +274,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 				res = sendto(listen_sock, msg, sizeof(stream_msg_o), 0,
 					&addr_client, addr_len);
 				if (res < 0) {
-					perror("sending stream message");
+					perror("SERV: sending stream message");
 				}
 				free(msg);
 				
@@ -286,7 +285,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 		
 			usleep(sleep_time);
 			cur_frame ++;	
-			free(line);
+			//free(line);
 			continue;		
 		}
 		
@@ -298,7 +297,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 			res = sendto(listen_sock, msg, sizeof(stream_msg_o), 0,
 				&addr_client, addr_len);
 			if (res < 0) {
-				perror("sending stream message");
+				perror("SERV: sending stream message");
 			}
 			free(msg);
 			
@@ -311,7 +310,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 		strncat(line_buffer, line, read);
 		data_count -= read; 
 		
-		free(line);
+		//free(line);
 		
 	}
 	
@@ -322,7 +321,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 		&addr_client, addr_len);
 		
 	if (res < 0) {
-		perror("sending stream message");
+		perror("SERV: sending stream message");
 	}
 	
 	free(msg);
@@ -340,7 +339,7 @@ void* client(void* arg) {
 	int sock_recv = msockcreate(RECV, RESPONSE_ADDR, RESPONSE_PORT);
 	
 	if (sock_recv < 0 || sock_send < 0) {
-		printf("Unable to start server, could not create sockets \n");		
+		printf("CLIENT: Unable to start server, could not create sockets \n");		
 		return NULL;
 	}
 	
@@ -362,7 +361,7 @@ void* client(void* arg) {
 		while (waiting) {
 			res = mrecv(sock_recv, (char*)&buf, sizeof(buf), MSG_DONTWAIT);	
 			if (res < 0 && errno == EAGAIN) {
-				printf("No data, waiting \n");
+				//printf("No data, waiting \n");
 				waiting --; // decrement the timeout counter
 				sleep(1); // sleep for a second				
 			}
@@ -376,14 +375,14 @@ void* client(void* arg) {
 		}
 		if (res < 0) {
 			if (errno != EAGAIN) {
-				perror("error receiving message");
+				perror("CLIENT: error receiving message");
 			}
 			else {
-				printf("Timed out. No one has the movie %s \n", movie_name);
+				printf("CLIENT: Timed out. No one has the movie %s \n", movie_name);
 			}
 		}
 		else {
-			printf("received msg: type %d, movie_name %s, ip %s, port %s \n", 
+			printf("CLIENT: received msg: type %d, movie_name %s, ip %s, port %s \n", 
 				buf.type, buf.movie_name, buf.ip_addr, buf.port);
 				
 			client_stream_movie(&buf);
@@ -416,13 +415,13 @@ int client_stream_movie(nutella_msg_o* msg) {
 	struct sockaddr* addr_server = get_sockaddr(msg->ip_addr, msg->port);
 	
 	int res = sendto(sockfd, &msg_stream, sizeof(msg_stream), 0, addr_server,
-		sizeof(struct sockaddr));
+		(socklen_t)sizeof(struct sockaddr));
 	
 	free(addr_server);
 		
 	if (res < 0) {
 		//couldnt send message to start the stream
-		perror("Sending stream message");
+		perror("CLIENT: Sending stream message");
 		close(sockfd);
 		return -1;
 	}
@@ -465,7 +464,7 @@ int client_stream_movie(nutella_msg_o* msg) {
 		}
 	}
 	
-	printf("Movie is done \n");
+	//printf("CLIENT: Movie is done \n");
 	
 	close(sockfd);
 	return 0;

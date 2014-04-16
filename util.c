@@ -43,7 +43,7 @@ int create_server_socket() {
 	
 	memset(&addr_me, 0, sizeof(addr_me));
 	addr_me.sin_family = AF_INET;
-	addr_me.sin_port = htons(0);
+	addr_me.sin_port = htons(9874);
 	addr_me.sin_addr.s_addr = htonl(INADDR_ANY); // my up
 	
 	res = bind(sockfd, (struct sockaddr *)&addr_me, sizeof(addr_me));
@@ -53,6 +53,8 @@ int create_server_socket() {
 		close(sockfd);
 		return -1;
 	}
+	
+	get_sock_port(sockfd);
 	
 	return sockfd;	
 
@@ -96,6 +98,8 @@ char* get_sock_port(int sock) {
 	}
 	
 	char* port = (char*) malloc(NI_MAXSERV);
+	
+	printf("RAW PORT: %d\n", addr.sin_port);
 	
 	snprintf(port, NI_MAXSERV, "%d", ntohs(addr.sin_port));
 	
