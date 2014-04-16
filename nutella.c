@@ -275,6 +275,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 					&addr_client, addr_len);
 				if (res < 0) {
 					perror("SERV: sending stream message 1");
+					printf("AI_FAMILY %d AF_INET: %d \n", addr_client.ai_family, AF_INET);
 				}
 				free(msg);
 				
