@@ -195,7 +195,7 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 	//the struct to contain the address of our client
 	//we will just stream the movie to the first client to respond
 	struct sockaddr addr_client;
-	socklen_t addr_len;
+	socklen_t addr_len = sizeof(addr_client);
 	// the buffer for receiving messages
 	nutella_msg_o buf;
 	
@@ -275,9 +275,10 @@ int server_listen_stream(int notify_sock, char* movie_name) {
 					&addr_client, addr_len);
 				if (res < 0) {
 					perror("SERV: sending stream message 1");
-					struct sockaddr_in* addr_client_in = (struct sockaddr_in*) &addr_client;
-					printf("AI_FAMILY %d AF_INET: %d \n", 
-						addr_client_in->sin_family, AF_INET);
+					////struct sockaddr_in* addr_client_in = (struct sockaddr_in*) &addr_client;
+					//printf("AI_FAMILY %d AF_INET: %d \n", 
+						//addr_client_in->sin_family, AF_INET);
+					break;
 				}
 				free(msg);
 				
@@ -435,7 +436,7 @@ int client_stream_movie(nutella_msg_o* msg) {
 	
 	
 	struct sockaddr addr_from;
-	socklen_t addr_len;
+	socklen_t addr_len = sizeof(addr_from);
 	
 	int waiting = STREAM_TIMEOUT;	
 	int cur_frame = -1;
